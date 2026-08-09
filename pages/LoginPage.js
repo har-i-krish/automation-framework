@@ -12,7 +12,8 @@ class LoginPage {
     await this.page.goto('/');
 }
     async openLogin() {
-    await this.loginLink.click();
+    await this.loginLink.click({ timeout: 10000 });
+    await this.page.waitForURL('**/login', { timeout: 10000 });
 }
 
     async loginCredentials(email, password) {
