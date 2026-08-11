@@ -1,5 +1,10 @@
 name: Playwright Tests
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 on:
   push:
     branches: [main]
@@ -42,3 +47,70 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Generate QA dashboard
+        run: |
+          mkdir -p site
+          printf '%s\n' \
+            '<!DOCTYPE html>' \
+            '<html lang="en">' \
+            '<head>' \
+            '<meta charset="UTF-8">' \
+            '<meta name="viewport" content="width=device-width, initial-scale=1.0">' \
+            '<title>Playwright QA Automation Dashboard</title>' \
+            '</head>' \
+            '<body>' \
+            '<h1>Playwright QA Automation Dashboard</h1>' \
+            '<h2>Pipeline Status</h2>' \
+            '<p><strong>CI Test Status:</strong> PASSED</p>' \
+            '<p><strong>Deployment Target:</strong> GitHub Pages</p>' \
+            '<h2>Framework</h2>' \
+            '<ul>' \
+            '<li>Playwright + JavaScript</li>' \
+            '<li>Browser: Chromium</li>' \
+            '<li>Test Suite: Complete Purchase Flow</li>' \
+            '</ul>' \
+            '<h2>End-to-End Coverage</h2>' \
+            '<p>Login -&gt; Products -&gt; Search Product -&gt; Product Details -&gt; Add to Cart -&gt; Cart -&gt; Checkout -&gt; Place Order</p>' \
+            '<h2>CI/CD</h2>' \
+            '<p>GitHub Actions CI -&gt; Playwright Tests -&gt; Successful Test Gate -&gt; GitHub Pages Deployment</p>' \
+            '<h2>Build Information</h2>' \
+            "<p>Repository: ${GITHUB_REPOSITORY}</p>" \
+            "<p>Branch: ${GITHUB_REF_NAME}</p>" \
+            "<p>Commit: ${GITHUB_SHA}</p>" \
+            "<p>Workflow Run: #${GITHUB_RUN_NUMBER}</p>" \
+            '</body>' \
+            '</html>' \
+            > site/index.html
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: './site'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+        
